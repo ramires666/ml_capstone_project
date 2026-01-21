@@ -1,0 +1,59 @@
+# Data files
+data/
+*.parquet
+*.csv
+*.db
+
+# Model artifacts
+models_artifacts/
+*.joblib
+*.pt
+*.pth
+
+# Old project files (reference only)
+old_project_files/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+*.env
+venv/
+.venv/
+
+# Reports (generated)
+reports/*.png
+reports/*.json
+static/
+
+# Temporary
+*.tmp
+*.temp
+.cache/

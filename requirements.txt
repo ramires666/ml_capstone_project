@@ -1,0 +1,36 @@
+# Core
+numpy
+pandas
+scipy
+joblib
+
+# ML
+scikit-learn
+xgboost
+
+# Deep Learning (PyTorch with CUDA)
+torch
+torchvision
+
+# Technical Analysis
+pandas-ta
+
+# Visualization
+matplotlib
+seaborn
+
+# API
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Database
+sqlalchemy
+
+# Utils
+pyyaml
+requests
+tqdm
+
+# Numba for acceleration
+numba

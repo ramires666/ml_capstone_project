@@ -1,0 +1,62 @@
+# CNN-LSTM Configuration
+model:
+  type: cnn_lstm
+  name: cnn_lstm_advanced
+
+# Data settings
+data:
+  symbol: BTCUSDT
+  timeframe: 15m
+  train_start: "2024-01-01"
+  train_end: "2025-06-30"
+  test_start: "2025-07-01"
+  test_end: "2025-12-31"
+
+# Target generation (Oracle labels)
+labeling:
+  sigma: 4
+  threshold: 0.0004
+  n_classes: 3  # Can switch to 2 if better
+
+# Feature settings
+features:
+  groups:
+    - momentum
+    - overlap
+    - trend
+    - volatility
+    - volume
+    - statistics
+  horizon: 1  # Predict 1 bar ahead
+  lookback: 20  # Sequence length for LSTM
+
+# CNN-LSTM architecture
+architecture:
+  conv_filters: 16
+  kernel_size: 3
+  lstm_units: 64
+  dropout: 0.5
+  dense_units: 32
+
+# Training settings
+training:
+  batch_size: 64
+  epochs: 100
+  learning_rate: 0.001
+  patience: 15  # Early stopping patience
+  device: cuda
+  random_seed: 42
+
+# Hyperparameter search (manual/grid)
+hyperparam_search:
+  lookback: [5, 10, 20, 30]
+  conv_filters: [8, 16, 32]
+  lstm_units: [32, 64, 128]
+  dropout: [0.3, 0.5]
+  learning_rate: [0.001, 0.0005, 0.0001]
+
+# Output paths
+output:
+  model_dir: models_artifacts
+  metrics_file: reports/metrics.json
+  plots_dir: reports/plots
