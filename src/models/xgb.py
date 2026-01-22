@@ -183,7 +183,7 @@ class XGBBaseline:
             n_iter=n_iter,
             scoring=scoring,
             cv=tscv,
-            verbose=1,
+            verbose=2,  # Increased verbosity as requested
             random_state=self.random_state,
             n_jobs=-1
         )
@@ -266,6 +266,10 @@ class XGBBaseline:
             'Feature': names,
             'Importance': importance
         }).sort_values('Importance', ascending=False)
+        
+        # Print top features to console as requested
+        print("\n📊 Top 20 Features:")
+        print(fi_df.head(20).to_string(index=False))
         
         return fi_df
     

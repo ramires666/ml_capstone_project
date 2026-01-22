@@ -7,6 +7,7 @@ A machine learning capstone project for predicting BTC price direction (UP/DOWN/
 Predicting exact cryptocurrency prices is nearly impossible due to high volatility. However, predicting **price direction** is more achievable and practically useful for trading decisions.
 
 This project implements:
+
 - **Baseline Model:** XGBoost classifier with 60+ technical indicators
 - **Advanced Model:** CNN-LSTM neural network for capturing temporal patterns
 
@@ -116,6 +117,7 @@ python -c "import xgboost as xgb; print('XGBoost version:', xgb.__version__)"
 ```
 
 Expected output:
+
 ```
 GPU: [PhysicalDevice(name='/physical_device:GPU:0', device_type='GPU')]
 XGBoost version: 2.x.x
@@ -136,6 +138,11 @@ python -m src.data.downloader
 ```
 
 ### Step 2: Parse ZIP Files to Parquet
+
+| col1 | col2 | col3 |
+| ---- | ---- | ---- |
+|      |      |      |
+|      |      |      |
 
 ```bash
 # Convert downloaded archives to Parquet format
@@ -231,10 +238,10 @@ curl -X POST http://localhost:8000/predict \
 
 ## 📈 Expected Results
 
-| Model | Accuracy | F1 Score | Horizon |
-|-------|----------|----------|---------|
-| XGBoost Baseline | ~45-55% | ~0.40-0.50 | 1 bar |
-| CNN-LSTM | ~45-55% | ~0.40-0.50 | 1 bar |
+| Model            | Accuracy | F1 Score   | Horizon |
+| ---------------- | -------- | ---------- | ------- |
+| XGBoost Baseline | ~45-55%  | ~0.40-0.50 | 1 bar   |
+| CNN-LSTM         | ~45-55%  | ~0.40-0.50 | 1 bar   |
 
 > Note: Results depend on market conditions and data period.
 
@@ -285,12 +292,12 @@ training:
 
 ## 📝 API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Web interface |
-| `/health` | GET | Health check |
-| `/predict` | POST | Make prediction |
-| `/docs` | GET | API documentation (Swagger) |
+| Endpoint     | Method | Description                 |
+| ------------ | ------ | --------------------------- |
+| `/`        | GET    | Web interface               |
+| `/health`  | GET    | Health check                |
+| `/predict` | POST   | Make prediction             |
+| `/docs`    | GET    | API documentation (Swagger) |
 
 ---
 

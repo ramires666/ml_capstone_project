@@ -91,57 +91,43 @@ def prepare_features(df: pd.DataFrame,
     
     # Step 1: Add technical indicators
     print("\n📊 Adding indicators...")
-    df_result = add_all_indicators(df_result, groups=groups)
     
+    # Track columns before to identify new ones
+    group_columns: Dict[str, List[str]] = {}
+    
+    for group in groups:
+        if group in GROUP_FUNCS:
+            cols_before = set(df_result.columns)
+            print(f"  -> Processing group: {group}")
+            
+            # Apply group function
+            df_result = GROUP_FUNCS[group](df_result)
+            
+            # Identify added columns
+            cols_after = set(df_result.columns)
+            new_cols = list(cols_after - cols_before)
+            
+            # Store in map
+            group_columns.setdefault(group, []).extend(new_cols)
+            
+            print(f"     Added {len(new_cols)} features: {', '.join(new_cols[:5])}..." if len(new_cols) > 5 else f"     Added {len(new_cols)} features: {', '.join(new_cols)}")
+        else:
+            print(f"  ⚠️ Warning: Unknown group '{group}'")
+
     # Step 2: Add log returns (useful feature)
     if 'log_return' not in df_result.columns:
         df_result['log_return'] = np.log(df_result['close'] / df_result['close'].shift(1))
     
-    # Step 3: Get indicator columns for each group
-    # This helps track which features came from which group
-    group_columns: Dict[str, List[str]] = {}
+    # Step 3: Categorize any remaining columns (if any were added outside the loop)
+    # This logic is now simpler because we tracked them in the loop above
     all_indicator_cols = get_indicator_columns(df_result)
-    
-    # Try to categorize columns by their prefix/naming convention
     for col in all_indicator_cols:
-        # Default to 'other' if can't categorize
-        assigned = False
-        col_upper = col.upper()
-        
-        # Momentum indicators
-        if any(x in col_upper for x in ['RSI', 'ROC', 'STOCH', 'CCI', 'WILLR', 
-                                         'AO', 'MOM', 'TSI', 'UO']):
-            group_columns.setdefault('momentum', []).append(col)
-            assigned = True
-        # Trend indicators
-        elif any(x in col_upper for x in ['MACD', 'ADX', 'AROON', 'VORTEX', 
-                                           'DPO', 'TRIX', 'CKSP']):
-            group_columns.setdefault('trend', []).append(col)
-            assigned = True
-        # Volatility
-        elif any(x in col_upper for x in ['ATR', 'NATR', 'BB', 'KC', 'DC', 'UI']):
-            group_columns.setdefault('volatility', []).append(col)
-            assigned = True
-        # Volume
-        elif any(x in col_upper for x in ['OBV', 'MFI', 'AD', 'CMF', 'EOM', 'NVI', 'PVI']):
-            group_columns.setdefault('volume', []).append(col)
-            assigned = True
-        # Overlap (moving averages)
-        elif any(x in col_upper for x in ['EMA', 'SMA', 'HMA', 'TEMA', 'PSAR', 
-                                           'SUPERT', 'VWAP']):
-            group_columns.setdefault('overlap', []).append(col)
-            assigned = True
-        # Candle patterns
-        elif 'CDL' in col_upper:
-            group_columns.setdefault('candle', []).append(col)
-            assigned = True
-        # Statistics
-        elif any(x in col_upper for x in ['ZSCORE', 'ENTROPY', 'KURTOSIS', 
-                                           'SKEW', 'VAR', 'MAD']):
-            group_columns.setdefault('statistics', []).append(col)
-            assigned = True
-        
-        if not assigned:
+        found = False
+        for g in group_columns:
+            if col in group_columns[g]:
+                found = True
+                break
+        if not found:
             group_columns.setdefault('other', []).append(col)
     
     # Step 4: Shift target for prediction horizon
@@ -151,15 +137,70 @@ def prepare_features(df: pd.DataFrame,
         # Shift target backward (negative = future values move to current row)
         df_result['target'] = df_result['target'].shift(-horizon)
     
-    # Step 5: Drop NaN values
+    # Step 5: Handle inf and NaN values
     rows_before = len(df_result)
     if dropna:
-        df_result = df_result.dropna()
+        # Replace inf with NaN (some indicators produce inf from division by zero)
+        df_result = df_result.replace([np.inf, -np.inf], np.nan)
+        
+        # Forward fill funding rate columns (they update every 8 hours, not every 15 min)
+        funding_cols = ['funding_interval_hours', 'last_funding_rate']
+        for col in funding_cols:
+            if col in df_result.columns:
+                df_result[col] = df_result[col].ffill().bfill()
+        
+        # Find the maximum warmup period (max NaN count at the start of any column)
+        # This is how many rows we need to drop from the beginning
+        nan_counts = df_result.isna().sum()
+        
+        # Show top NaN columns for debugging
+        top_nan = nan_counts.sort_values(ascending=False).head(5)
+        if top_nan.max() > 0:
+            print(f"\n📋 Top NaN columns:")
+            for col, cnt in top_nan.items():
+                print(f"   {col}: {cnt} NaN")
+        
+        max_warmup = int(nan_counts.max()) if len(nan_counts) > 0 else 0
+        
+        # Cap max_warmup at 300 rows to avoid losing too much data
+        # If an indicator needs more warmup, we'll fill with 0 instead
+        WARMUP_CAP = 300
+        if max_warmup > WARMUP_CAP:
+            print(f"\n⚠️ Max warmup {max_warmup} exceeds cap {WARMUP_CAP}, using cap")
+            max_warmup = WARMUP_CAP
+        
+        # Also account for the last row NaN from target shift
+        # Drop first max_warmup rows and last 1 row
+        if max_warmup > 0 or 'target' in df_result.columns:
+            drop_start = max_warmup
+            drop_end = 1 if 'target' in df_result.columns else 0
+            df_result = df_result.iloc[drop_start:-drop_end] if drop_end > 0 else df_result.iloc[drop_start:]
+            print(f"\n📋 Warmup period: {drop_start} rows, target shift: {drop_end} row")
+        
+        # Fill any remaining NaN with 0 (rare edge cases)
+        remaining_nan = df_result.isna().sum().sum()
+        if remaining_nan > 0:
+            print(f"   Filling {remaining_nan} remaining NaN with 0")
+            df_result = df_result.fillna(0)
+        
+        # Fill any remaining NaN with 0 (rare edge cases)
+        remaining_nan = df_result.isna().sum().sum()
+        if remaining_nan > 0:
+            print(f"   Filling {remaining_nan} remaining NaN with 0")
+            df_result = df_result.fillna(0)
+        
     rows_after = len(df_result)
-    print(f"\n🧹 Dropped {rows_before - rows_after} rows with NaN")
+    print(f"\n🧹 Dropped {rows_before - rows_after} rows with NaN ({rows_after:,} remaining)")
     
-    # Step 6: Convert target to integer
-    if 'target' in df_result.columns:
+    # Check if we dropped too many rows
+    if rows_after == 0:
+        print("\n⚠️ WARNING: All rows were dropped! Check if:")
+        print("   1. Oracle labels were created (target column exists)")
+        print("   2. Data has enough rows for indicator warmup (~50)")
+        print("   3. Some columns are entirely NaN")
+    
+    # Step 6: Convert target to integer (only if dropna was True, so no NaN remain)
+    if 'target' in df_result.columns and len(df_result) > 0 and dropna:
         df_result['target'] = df_result['target'].astype(int)
     
     # Summary

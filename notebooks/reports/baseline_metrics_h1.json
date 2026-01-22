@@ -1,0 +1,16 @@
+{
+  "accuracy": 0.6054758652094717,
+  "f1_weighted": 0.603656080363716,
+  "f1_macro": 0.5955972297283058,
+  "best_params": {
+    "subsample": 0.6,
+    "reg_lambda": 0.1,
+    "reg_alpha": 1,
+    "n_estimators": 200,
+    "min_child_weight": 3,
+    "max_depth": 2,
+    "learning_rate": 0.03,
+    "gamma": 0,
+    "colsample_bytree": 0.8
+  }
+}

@@ -158,11 +158,9 @@ def add_overlap_category(df: pd.DataFrame) -> pd.DataFrame:
     # Triple Exponential Moving Average - even less lag
     df.ta.tema(length=9, append=True)
     
-    # Parabolic SAR - Stop And Reverse, good for trailing stops
-    df.ta.psar(append=True)
-    
-    # Supertrend - popular trend-following indicator
-    df.ta.supertrend(length=7, multiplier=3, append=True)
+    # NOTE: Parabolic SAR and Supertrend removed - they produce 30000+ NaN
+    # because they only output values during trend changes, not every bar
+    # This corrupts the training data when filled with zeros
     
     # VWAP - Volume Weighted Average Price
     # Only calculated if volume is available
