@@ -289,40 +289,51 @@ if results:
 
 # %%
 # ==============================================================================
-# SIDE-BY-SIDE CONFUSION MATRICES
+# CONFUSION MATRICES FOR ALL MODELS
 # ==============================================================================
 
-if xgb_available and cnn_available:
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+# Determine how many models we have
+n_models = sum([xgb_available, cnn_available, tcn_available])
+if n_models >= 2:
+    fig, axes = plt.subplots(1, n_models, figsize=(6*n_models, 5))
+    if n_models == 2:
+        axes = [axes[0], axes[1]]
     labels = ['DOWN', 'SIDEWAYS', 'UP']
     
-    # XGBoost confusion matrix
-    cm_xgb = np.array(xgb_metrics['confusion_matrix'])
-    sns.heatmap(cm_xgb, annot=True, fmt='d', cmap='Blues',
-                xticklabels=labels, yticklabels=labels, ax=axes[0],
-                annot_kws={"size": 12})
-    axes[0].set_xlabel('Predicted', fontsize=11)
-    axes[0].set_ylabel('Actual', fontsize=11)
-    axes[0].set_title(f"XGBoost (Accuracy: {xgb_metrics['accuracy']:.1%})", 
-                      fontsize=12, fontweight='bold')
+    ax_idx = 0
     
-    # CNN-LSTM confusion matrix
-    cm_cnn = np.array(cnn_metrics['confusion_matrix'])
-    sns.heatmap(cm_cnn, annot=True, fmt='d', cmap='Greens',
-                xticklabels=labels, yticklabels=labels, ax=axes[1],
-                annot_kws={"size": 12})
-    axes[1].set_xlabel('Predicted', fontsize=11)
-    axes[1].set_ylabel('Actual', fontsize=11)
-    axes[1].set_title(f"CNN-LSTM (Accuracy: {cnn_metrics['accuracy']:.1%})", 
-                      fontsize=12, fontweight='bold')
+    # XGBoost
+    if xgb_available:
+        cm_xgb = np.array(xgb_metrics['confusion_matrix'])
+        sns.heatmap(cm_xgb, annot=True, fmt='d', cmap='Blues',
+                    xticklabels=labels, yticklabels=labels, ax=axes[ax_idx])
+        axes[ax_idx].set_xlabel('Predicted')
+        axes[ax_idx].set_ylabel('Actual')
+        axes[ax_idx].set_title(f"XGBoost ({xgb_metrics['accuracy']:.1%})")
+        ax_idx += 1
+    
+    # CNN-LSTM
+    if cnn_available:
+        cm_cnn = np.array(cnn_metrics['confusion_matrix'])
+        sns.heatmap(cm_cnn, annot=True, fmt='d', cmap='Greens',
+                    xticklabels=labels, yticklabels=labels, ax=axes[ax_idx])
+        axes[ax_idx].set_xlabel('Predicted')
+        axes[ax_idx].set_ylabel('Actual')
+        axes[ax_idx].set_title(f"CNN-LSTM ({cnn_metrics['accuracy']:.1%})")
+        ax_idx += 1
+    
+    # TCN-Attention
+    if tcn_available:
+        cm_tcn = np.array(tcn_metrics['confusion_matrix'])
+        sns.heatmap(cm_tcn, annot=True, fmt='d', cmap='Oranges',
+                    xticklabels=labels, yticklabels=labels, ax=axes[ax_idx])
+        axes[ax_idx].set_xlabel('Predicted')
+        axes[ax_idx].set_ylabel('Actual')
+        axes[ax_idx].set_title(f"TCN-Attention ({tcn_metrics['accuracy']:.1%})")
     
     plt.tight_layout()
     plt.savefig('comparison_confusion_matrices.png', dpi=150, bbox_inches='tight')
     plt.show()
-    
-    print("\n💡 ANALYSIS:")
-    print("   - Diagonal = correct predictions (higher is better)")
-    print("   - Compare patterns to see where each model excels")
 
 # %% [markdown]
 # ## 4. Per-Class Performance
@@ -337,33 +348,32 @@ if xgb_available and cnn_available:
 # PER-CLASS PERFORMANCE BREAKDOWN
 # ==============================================================================
 
-if xgb_available and cnn_available:
+if xgb_available or cnn_available or tcn_available:
     print("\n" + "="*60)
-    print("📊 PER-CLASS PERFORMANCE")
+    print("📊 PER-CLASS PERFORMANCE (F1 Scores)")
     print("="*60)
     
-    # Extract per-class metrics from classification reports
     class_metrics = []
     
     for cls_name in ['DOWN', 'SIDEWAYS', 'UP']:
-        # XGBoost per-class metrics
-        # Try both uppercase and lowercase keys (different sklearn versions)
-        xgb_report = xgb_metrics['classification_report']
-        xgb_cls = xgb_report.get(cls_name, xgb_report.get(cls_name.lower(), {}))
+        row = {'Class': cls_name}
         
-        # CNN-LSTM per-class metrics
-        cnn_report = cnn_metrics['classification_report']
-        cnn_cls = cnn_report.get(cls_name, cnn_report.get(cls_name.lower(), {}))
+        if xgb_available:
+            xgb_report = xgb_metrics['classification_report']
+            xgb_cls = xgb_report.get(cls_name, xgb_report.get(cls_name.lower(), {}))
+            row['XGB F1'] = xgb_cls.get('f1-score', 0)
         
-        class_metrics.append({
-            'Class': cls_name,
-            'XGB Precision': xgb_cls.get('precision', 0),
-            'XGB Recall': xgb_cls.get('recall', 0),
-            'XGB F1': xgb_cls.get('f1-score', 0),
-            'CNN Precision': cnn_cls.get('precision', 0),
-            'CNN Recall': cnn_cls.get('recall', 0),
-            'CNN F1': cnn_cls.get('f1-score', 0),
-        })
+        if cnn_available:
+            cnn_report = cnn_metrics['classification_report']
+            cnn_cls = cnn_report.get(cls_name, cnn_report.get(cls_name.lower(), {}))
+            row['CNN F1'] = cnn_cls.get('f1-score', 0)
+        
+        if tcn_available:
+            tcn_report = tcn_metrics['classification_report']
+            tcn_cls = tcn_report.get(cls_name, tcn_report.get(cls_name.lower(), {}))
+            row['TCN F1'] = tcn_cls.get('f1-score', 0)
+        
+        class_metrics.append(row)
     
     class_df = pd.DataFrame(class_metrics)
     print("\n" + class_df.to_string(index=False))
@@ -623,6 +633,21 @@ for h in horizons:
         print(f"✅ CNN-LSTM H={h}: Acc={metrics_h['accuracy']:.4f}")
     except Exception:
         print(f"   CNN-LSTM H={h}: Not found")
+    
+    # Try loading TCN-Attention for this horizon
+    if tcn_module_available:
+        try:
+            tcn_h = TCNAttentionModel.load(MODEL_DIR, name=f'tcn_attention_h{h}', device='cuda')
+            metrics_h = tcn_h.evaluate(X_h, y_h)
+            horizon_results.append({
+                'Horizon': f'{h} bar(s)',
+                'Model': 'TCN-Attention',
+                'Accuracy': metrics_h['accuracy'],
+                'F1': metrics_h['f1_weighted']
+            })
+            print(f"✅ TCN-Attention H={h}: Acc={metrics_h['accuracy']:.4f}")
+        except Exception:
+            print(f"   TCN-Attention H={h}: Not found")
 
 if horizon_results:
     horizon_df = pd.DataFrame(horizon_results)
