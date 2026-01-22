@@ -1,6 +1,6 @@
 """
 ==============================================================================
-TRAIN MODELS FOR ADDITIONAL HORIZONS (3 and 5 bars ahead)
+04 - TRAIN MODELS FOR ADDITIONAL HORIZONS (3 and 5 bars ahead)
 ==============================================================================
 
 PURPOSE OF THIS SCRIPT:
@@ -334,28 +334,36 @@ for horizon_index, horizon in enumerate(HORIZONS_TO_TRAIN, start=1):
     # We reuse them here as a reasonable starting point.
     print(f"\n      [1/2] Initializing CNN-LSTM model...")
     cnn_model = CNNLSTMModel(
-        n_features=len(feature_cols),  # Number of input features
         n_classes=3,                    # 3-class classification
-        seq_len=32,                     # Look at 32 time steps of history
+        lookback=32,                    # Look at 32 time steps of history
         conv_filters=64,                # 64 convolutional filters
         lstm_units=64,                  # 64 LSTM units
         dropout=0.3,                    # 30% dropout to prevent overfitting
-        learning_rate=0.001,            # Adam optimizer learning rate
+        learning_rate=0.0007,           # Adam learning rate (reduced 30% from 0.001 for stability)
         device='cuda'                   # Use GPU for training
     )
     
     # Train the model.
-    # epochs=50 is the maximum; early stopping will stop earlier if needed.
-    # batch_size=128 is a good balance between speed and gradient accuracy.
-    print(f"      [2/2] Training neural network (this may take 10-20 minutes)...")
+    # IMPORTANT: We use aggressive early stopping to prevent overfitting.
+    # Based on observed training behavior:
+    #   - Accuracy typically peaks in first 3-5 epochs
+    #   - Then slowly decreases over next 10+ epochs if we keep training
+    #   - This is classic overfitting - model memorizes training data
+    #
+    # Our solution:
+    #   - patience=5: Stop if no improvement for 5 epochs (was 10)
+    #   - epochs=30: Maximum epochs (was 50), but early stopping usually kicks in earlier
+    #   - batch_size=128: Good balance between speed and gradient quality
+    print(f"      [2/2] Training neural network...")
+    print(f"           Using aggressive early stopping (patience=5) to prevent overfitting")
     print(f"           Watch for training progress below...")
     
     history = cnn_model.fit(
         X_train, y_train,
         X_val, y_val,
-        epochs=50,                      # Maximum number of epochs
+        epochs=30,                      # Maximum epochs (reduced from 50)
         batch_size=128,                 # Samples per gradient update
-        early_stopping_patience=10      # Stop if no improvement for 10 epochs
+        patience=5                      # Stop if no improvement for 5 epochs
     )
     
     # Evaluate on test set

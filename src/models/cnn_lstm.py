@@ -344,7 +344,7 @@ class CNNLSTMModel:
             feature_names: Optional[List[str]] = None,
             epochs: int = 100,
             batch_size: int = 64,
-            patience: int = 15,
+            patience: int = 5,  # Reduced from 15 - accuracy peaks in 3-5 epochs
             scale: bool = True) -> 'CNNLSTMModel':
         """
         Train the CNN-LSTM model.
