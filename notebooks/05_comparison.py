@@ -314,14 +314,15 @@ if xgb_available and cnn_available:
     # Extract per-class metrics from classification reports
     class_metrics = []
     
-    for cls_num, cls_name in enumerate(['DOWN', 'SIDEWAYS', 'UP']):
+    for cls_name in ['DOWN', 'SIDEWAYS', 'UP']:
         # XGBoost per-class metrics
+        # Try both uppercase and lowercase keys (different sklearn versions)
         xgb_report = xgb_metrics['classification_report']
-        xgb_cls = xgb_report.get(str(cls_num), {})
+        xgb_cls = xgb_report.get(cls_name, xgb_report.get(cls_name.lower(), {}))
         
         # CNN-LSTM per-class metrics
         cnn_report = cnn_metrics['classification_report']
-        cnn_cls = cnn_report.get(str(cls_num), {})
+        cnn_cls = cnn_report.get(cls_name, cnn_report.get(cls_name.lower(), {}))
         
         class_metrics.append({
             'Class': cls_name,
@@ -407,16 +408,23 @@ if xgb_available and cnn_available:
     print("📊 STATISTICAL SIGNIFICANCE TEST")
     print("="*60)
     
-    # Create contingency table for McNemar's test
-    # Rows: XGBoost (correct/incorrect), Cols: CNN-LSTM (correct/incorrect)
-    xgb_correct = (xgb_preds == y_test)
-    cnn_correct = (cnn_preds == y_test)
+    # CNN-LSTM uses lookback window so it outputs fewer predictions.
+    # We need to align the arrays before comparing.
+    lookback = cnn_model.lookback
     
-    # Count the four cases
+    # Trim XGBoost predictions and y_test to match CNN-LSTM length
+    xgb_preds_aligned = xgb_preds[lookback:]
+    y_test_aligned = y_test[lookback:]
+    
+    # Now both arrays have the same length as cnn_preds
+    xgb_correct = (xgb_preds_aligned == y_test_aligned)
+    cnn_correct = (cnn_preds == y_test_aligned)
+    
+    # Count the four cases for contingency table
     both_correct = np.sum(xgb_correct & cnn_correct)
     both_wrong = np.sum(~xgb_correct & ~cnn_correct)
-    xgb_only_correct = np.sum(xgb_correct & ~cnn_correct)  # XGB right, CNN wrong
-    cnn_only_correct = np.sum(~xgb_correct & cnn_correct)  # CNN right, XGB wrong
+    xgb_only_correct = np.sum(xgb_correct & ~cnn_correct)
+    cnn_only_correct = np.sum(~xgb_correct & cnn_correct)
     
     print(f"""
 Contingency Table:

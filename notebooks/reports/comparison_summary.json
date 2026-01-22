@@ -1,19 +1,22 @@
 {
   "best_model": "XGBoost",
-  "best_accuracy": 0.6548604638412193,
-  "best_f1": 0.6746865214728897,
+  "best_accuracy": 0.650785519125683,
+  "best_f1": 0.6706013962656066,
+  "random_baseline": 0.333,
+  "improvement": 0.31778551912568304,
   "models": [
     {
       "Model": "XGBoost",
-      "Accuracy": 0.6548604638412193,
-      "F1 Weighted": 0.6746865214728897,
-      "F1 Macro": 0.5901162508011365
+      "Accuracy": 0.650785519125683,
+      "F1 Weighted": 0.6706013962656066,
+      "F1 Macro": 0.588933750540772
     },
     {
       "Model": "CNN-LSTM",
-      "Accuracy": 0.6141861868451368,
-      "F1 Weighted": 0.638147471719165,
-      "F1 Macro": 0.5419540764269105
+      "Accuracy": 0.6083836427839162,
+      "F1 Weighted": 0.6325683548341595,
+      "F1 Macro": 0.5400927299192527
     }
-  ]
+  ],
+  "horizon": 1
 }
