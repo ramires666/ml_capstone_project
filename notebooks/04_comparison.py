@@ -25,8 +25,7 @@ WHAT YOU'LL LEARN:
 - Visual comparison of confusion matrices
 - How to make data-driven model selection decisions
 
-Run this script or convert to Jupyter notebook using:
-    jupytext --to notebook 04_comparison.py
+
 """
 
 # %% [markdown]

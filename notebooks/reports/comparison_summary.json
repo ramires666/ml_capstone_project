@@ -1,0 +1,19 @@
+{
+  "best_model": "XGBoost",
+  "best_accuracy": 0.6548604638412193,
+  "best_f1": 0.6746865214728897,
+  "models": [
+    {
+      "Model": "XGBoost",
+      "Accuracy": 0.6548604638412193,
+      "F1 Weighted": 0.6746865214728897,
+      "F1 Macro": 0.5901162508011365
+    },
+    {
+      "Model": "CNN-LSTM",
+      "Accuracy": 0.5875734123716999,
+      "F1 Weighted": 0.6139330165082044,
+      "F1 Macro": 0.5253703716127106
+    }
+  ]
+}
