@@ -465,9 +465,9 @@ print("="*60)
 
 # Create labels with our chosen parameters
 # sigma=4: Medium smoothing (good for 15-min candles)
-# threshold=0.0003: Slope threshold for direction classification
+# threshold=0.0002: Slope threshold for direction classification
 SIGMA = 4
-THRESHOLD = 0.0003
+THRESHOLD = 0.0002
 
 print(f"\nGenerating labels with:")
 print(f"  sigma = {SIGMA} (smoothing strength)")

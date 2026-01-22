@@ -127,7 +127,7 @@ print("📥 LOADING TEST DATA")
 print("="*60)
 
 df = load_and_merge_data(end_date='2025-12-31')
-df = create_oracle_labels(df, sigma=4, threshold=0.0004)
+df = create_oracle_labels(df, sigma=4, threshold=0.0002)
 df_features, _ = prepare_features(df, horizon=HORIZON)
 
 # Split to get test set
