@@ -256,6 +256,9 @@ feature_cols = get_indicator_columns(
 feature_cols = [c for c in feature_cols if c in train_df.columns]
 
 print(f"\n✅ Features selected: {len(feature_cols)}")
+print("\n📋 FULL FEATURE LIST:")
+for i, col in enumerate(sorted(feature_cols), 1):
+    print(f"   {i:3d}. {col}")
 
 # %%
 # ==============================================================================

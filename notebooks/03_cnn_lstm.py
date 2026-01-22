@@ -24,8 +24,6 @@ EXPECTED RESULTS:
 - Main advantage: Can learn non-linear patterns automatically
 - Main disadvantage: Slower training, needs more data
 
-Run this script or convert to Jupyter notebook using:
-    jupytext --to notebook 03_cnn_lstm.py
 """
 
 # %% [markdown]
@@ -126,7 +124,7 @@ from src.models.cnn_lstm import CNNLSTMModel
 
 # Oracle label parameters (same as baseline for fair comparison)
 SIGMA = 4           # Gaussian smoothing sigma
-THRESHOLD = 0.0004  # Slope threshold for direction classification
+THRESHOLD = 0.0002  # Slope threshold for direction classification
 
 # Prediction horizon
 HORIZON = 1         # Predict next bar direction
@@ -336,8 +334,7 @@ print("\n✅ Training complete!")
 # %% [markdown]
 # ## 4. Training History Visualization
 # 
-# **WHY VISUALIZE TRAINING?**
-# 
+#
 # The training curves tell us:
 # - Is the model learning? (loss decreasing)
 # - Is it overfitting? (train loss << val loss)

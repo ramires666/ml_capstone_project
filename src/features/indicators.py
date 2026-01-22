@@ -549,11 +549,12 @@ def get_indicator_columns(df: pd.DataFrame,
     List[str]
         List of indicator column names.
     """
-    # Base columns that are NOT indicators
+    # Base columns that are NOT indicators (raw data columns)
+    # NOTE: buy_vol, sell_vol, total_vol are included as features (not excluded)
+    # because they provide important volume breakdown information
     base_cols = {
         'time', 'open', 'high', 'low', 'close', 'volume',
-        'total_vol', 'buy_vol', 'sell_vol', 'quote_volume',
-        'taker_buy_volume', 'taker_buy_quote_volume', 'count',
+        'quote_volume', 'taker_buy_volume', 'taker_buy_quote_volume', 'count',
         'funding_rate', 'log_return',
         'target', 'smoothed_close', 'smooth_slope'
     }
