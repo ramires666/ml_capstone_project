@@ -592,7 +592,8 @@ if xgb_available:
 print("\n" + "="*60)
 print("🔮 MULTI-HORIZON COMPARISON")
 print("="*60)
-print("Checking for models trained on different horizons...\n")
+print("Checking for models trained on different horizons...")
+print(f"   TCN module available: {tcn_module_available}\n")
 
 horizons = [1, 3, 5]
 horizon_results = []
