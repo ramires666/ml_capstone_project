@@ -385,7 +385,77 @@ if xgb_available and cnn_available:
     plt.show()
 
 # %% [markdown]
-# ## 5. Predictions Visualization
+# ## 5. Statistical Significance Testing
+# 
+# **WHY TEST STATISTICAL SIGNIFICANCE?**
+# 
+# Just because one model has higher accuracy doesn't mean it's truly better.
+# We use McNemar's test to determine if the difference is statistically significant.
+
+# %%
+# ==============================================================================
+# STATISTICAL SIGNIFICANCE TEST (McNemar's Test)
+# ==============================================================================
+#
+# McNemar's test compares paired predictions:
+# - How often does Model A get right what Model B gets wrong?
+# - How often does Model B get right what Model A gets wrong?
+# - If these counts differ significantly, one model is truly better.
+
+if xgb_available and cnn_available:
+    print("\n" + "="*60)
+    print("📊 STATISTICAL SIGNIFICANCE TEST")
+    print("="*60)
+    
+    # Create contingency table for McNemar's test
+    # Rows: XGBoost (correct/incorrect), Cols: CNN-LSTM (correct/incorrect)
+    xgb_correct = (xgb_preds == y_test)
+    cnn_correct = (cnn_preds == y_test)
+    
+    # Count the four cases
+    both_correct = np.sum(xgb_correct & cnn_correct)
+    both_wrong = np.sum(~xgb_correct & ~cnn_correct)
+    xgb_only_correct = np.sum(xgb_correct & ~cnn_correct)  # XGB right, CNN wrong
+    cnn_only_correct = np.sum(~xgb_correct & cnn_correct)  # CNN right, XGB wrong
+    
+    print(f"""
+Contingency Table:
+                     CNN-LSTM Correct    CNN-LSTM Wrong
+    XGBoost Correct     {both_correct:,}              {xgb_only_correct:,}
+    XGBoost Wrong       {cnn_only_correct:,}              {both_wrong:,}
+    
+Key insight:
+  - XGBoost correct when CNN-LSTM wrong: {xgb_only_correct:,} samples
+  - CNN-LSTM correct when XGBoost wrong: {cnn_only_correct:,} samples
+""")
+    
+    # McNemar's test (with continuity correction)
+    # H0: Both models have the same error rate
+    # We compare b (XGB only correct) vs c (CNN only correct)
+    b, c = xgb_only_correct, cnn_only_correct
+    
+    if b + c > 0:
+        # Chi-squared statistic with continuity correction
+        chi2_stat = (abs(b - c) - 1)**2 / (b + c)
+        p_value = 1 - stats.chi2.cdf(chi2_stat, df=1)
+        
+        print(f"McNemar's Test Results:")
+        print(f"  Chi-squared statistic: {chi2_stat:.4f}")
+        print(f"  p-value: {p_value:.6f}")
+        print(f"  Significance level: α = 0.05")
+        
+        if p_value < 0.05:
+            winner = "XGBoost" if b > c else "CNN-LSTM"
+            print(f"\n🎯 RESULT: Statistically SIGNIFICANT difference (p < 0.05)")
+            print(f"   → {winner} is significantly better")
+        else:
+            print(f"\n🎯 RESULT: No statistically significant difference (p >= 0.05)")
+            print(f"   → Models perform similarly, difference may be due to chance")
+    else:
+        print("⚠️ Cannot perform McNemar's test: no discordant pairs")
+
+# %% [markdown]
+# ## 6. Predictions Visualization
 # 
 # **WHY VISUALIZE PREDICTIONS?**
 # 
@@ -457,7 +527,7 @@ if xgb_available:
     print("   - Frequent color changes in predictions = noisy model")
 
 # %% [markdown]
-# ## 6. Multi-Horizon Comparison (Optional)
+# ## 7. Multi-Horizon Comparison (Optional)
 # 
 # If you trained models for different horizons (1, 3, 5 bars),
 # this section compares them.
@@ -522,7 +592,7 @@ else:
     print("\n⚠️ Only horizon=1 models found. Train with different horizons to compare.")
 
 # %% [markdown]
-# ## 7. Final Conclusions
+# ## 8. Final Conclusions
 
 # %%
 # ==============================================================================
