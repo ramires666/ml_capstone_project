@@ -36,6 +36,7 @@ This project trains ML models to predict Bitcoin price direction.
 | 01 | `01_eda.ipynb` | Data exploration, oracle label creation | ~5 min |
 | 02 | `02_baseline_xgb.ipynb` | Train XGBoost baseline model (h=1) | ~10 min |
 | 03 | `03_cnn_lstm.ipynb` | Train CNN-LSTM model (h=1) | ~20 min |
+| 03b | `03b_tcn_attention.py` | Train TCN-Attention model (h=1) | ~15 min |
 | 04 | `04_train_additional_horizons.py` | Train XGBoost + CNN-LSTM for h=3,5 (**script**) | ~60 min |
 | 05 | `05_comparison.ipynb` | Compare all models, statistical tests | ~5 min |
 

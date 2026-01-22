@@ -65,7 +65,6 @@ plt.style.use('seaborn-v0_8-darkgrid')
 # IMPORT PROJECT MODULES
 # ==============================================================================
 
-# Reload modules to pick up any code changes without restarting kernel
 import importlib
 import src.data.loader
 import src.labeling.oracle
@@ -73,6 +72,14 @@ import src.features.builder
 import src.features.indicators
 import src.models.xgb
 import src.models.cnn_lstm
+try:
+    import src.models.tcn_attention
+    importlib.reload(src.models.tcn_attention)
+    from src.models.tcn_attention import TCNAttentionModel
+    tcn_module_available = True
+except ImportError:
+    tcn_module_available = False
+
 importlib.reload(src.data.loader)
 importlib.reload(src.labeling.oracle)
 importlib.reload(src.features.builder)
@@ -176,6 +183,16 @@ except Exception as e:
     print(f"⚠️ CNN-LSTM model not found: {e}")
     cnn_available = False
 
+# Load TCN-Attention model (if available)
+tcn_available = False
+if tcn_module_available:
+    try:
+        tcn_model = TCNAttentionModel.load(MODEL_DIR, name=f'tcn_attention_h{HORIZON}', device='cuda')
+        tcn_available = True
+        print(f"✅ TCN-Attention model loaded: {MODEL_DIR}/tcn_attention_h{HORIZON}_model.keras")
+    except Exception as e:
+        print(f"⚠️ TCN-Attention model not found: {e}")
+
 if not xgb_available and not cnn_available:
     print("\n❌ No models found! Run notebooks 02 and 03 first to train models.")
 
@@ -225,6 +242,20 @@ if cnn_available:
         'F1 Macro': cnn_metrics['f1_macro']
     })
     print(f"  Accuracy: {cnn_metrics['accuracy']:.4f}")
+
+# Evaluate TCN-Attention
+if tcn_available:
+    print("\nEvaluating TCN-Attention...")
+    tcn_metrics = tcn_model.evaluate(X_test, y_test)
+    tcn_preds = tcn_model.predict(X_test)
+    
+    results.append({
+        'Model': 'TCN-Attention',
+        'Accuracy': tcn_metrics['accuracy'],
+        'F1 Weighted': tcn_metrics['f1_weighted'],
+        'F1 Macro': tcn_metrics['f1_macro']
+    })
+    print(f"  Accuracy: {tcn_metrics['accuracy']:.4f}")
 
 # %%
 # ==============================================================================
