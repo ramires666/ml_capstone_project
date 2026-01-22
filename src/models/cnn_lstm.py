@@ -85,10 +85,10 @@ def check_gpu():
 def build_cnn_lstm_model(n_features: int,
                          n_classes: int = 3,
                          lookback: int = 20,
-                         conv_filters: int = 16,
+                         conv_filters: int = 32,  # Increased from 16
                          kernel_size: int = 3,
                          lstm_units: int = 64,
-                         dropout: float = 0.5,
+                         dropout: float = 0.2,  # Reduced from 0.5 per expert recommendation
                          dense_units: int = 32) -> keras.Model:
     """
     Build CNN-LSTM model using Keras Functional API.
@@ -104,14 +104,14 @@ def build_cnn_lstm_model(n_features: int,
         Number of output classes (2 for UP/DOWN, 3 for UP/SIDEWAYS/DOWN).
     lookback : int, default=20
         Number of timesteps in input sequences.
-    conv_filters : int, default=16
-        Number of filters in Conv1D layer.
+    conv_filters : int, default=32
+        Number of filters in first Conv1D layer.
     kernel_size : int, default=3
         Size of 1D convolution kernel.
     lstm_units : int, default=64
         Number of units in first LSTM layer.
-    dropout : float, default=0.5
-        Dropout rate for regularization.
+    dropout : float, default=0.2
+        Dropout rate for regularization (0.2-0.3 recommended for financial data).
     dense_units : int, default=32
         Number of units in dense layer before output.
     
@@ -124,7 +124,7 @@ def build_cnn_lstm_model(n_features: int,
     inputs = layers.Input(shape=(lookback, n_features), name='input')
     
     # ---------------------------------------------------------------------
-    # CNN Block: Extract local patterns
+    # CNN Block 1: Extract local patterns
     # ---------------------------------------------------------------------
     # Conv1D applies 1D convolution along the time axis
     # This helps detect local patterns like momentum spikes, candle patterns
@@ -132,17 +132,31 @@ def build_cnn_lstm_model(n_features: int,
         filters=conv_filters,
         kernel_size=kernel_size,
         padding='same',  # Keep sequence length unchanged
-        name='conv1d'
+        name='conv1d_1'
     )(inputs)
     
     # Batch normalization: stabilize and speed up training
-    x = layers.BatchNormalization(name='bn_conv')(x)
+    x = layers.BatchNormalization(name='bn_conv1')(x)
     
     # ReLU activation: introduce non-linearity
-    x = layers.Activation('relu', name='relu_conv')(x)
+    x = layers.Activation('relu', name='relu_conv1')(x)
     
     # Dropout: randomly zero out neurons to prevent overfitting
-    x = layers.Dropout(dropout, name='dropout_conv')(x)
+    x = layers.Dropout(dropout, name='dropout_conv1')(x)
+    
+    # ---------------------------------------------------------------------
+    # CNN Block 2: Deeper feature extraction
+    # ---------------------------------------------------------------------
+    x = layers.Conv1D(
+        filters=conv_filters * 2,  # 64 filters
+        kernel_size=kernel_size,
+        padding='same',
+        name='conv1d_2'
+    )(x)
+    
+    x = layers.BatchNormalization(name='bn_conv2')(x)
+    x = layers.Activation('relu', name='relu_conv2')(x)
+    x = layers.Dropout(dropout, name='dropout_conv2')(x)
     
     # ---------------------------------------------------------------------
     # LSTM Block 1: Capture temporal dependencies
@@ -229,9 +243,9 @@ class CNNLSTMModel:
     def __init__(self,
                  n_classes: int = 3,
                  lookback: int = 20,
-                 conv_filters: int = 16,
+                 conv_filters: int = 32,  # Increased from 16
                  lstm_units: int = 64,
-                 dropout: float = 0.5,
+                 dropout: float = 0.2,  # Reduced from 0.5
                  dense_units: int = 32,
                  learning_rate: float = 0.001,
                  device: str = 'cuda',
@@ -245,12 +259,12 @@ class CNNLSTMModel:
             Number of output classes.
         lookback : int, default=20
             Sequence length for LSTM input.
-        conv_filters : int, default=16
+        conv_filters : int, default=32
             Number of Conv1D filters.
         lstm_units : int, default=64
             Units in first LSTM layer.
-        dropout : float, default=0.5
-            Dropout rate.
+        dropout : float, default=0.2
+            Dropout rate (0.2-0.3 recommended for financial data).
         dense_units : int, default=32
             Units in dense layer.
         learning_rate : float, default=0.001
@@ -407,18 +421,22 @@ class CNNLSTMModel:
         # Setup callbacks
         callback_list = [
             # Early stopping: stop if val_loss doesn't improve
+            # min_delta=0.001 means ignore improvements smaller than 0.1%
             callbacks.EarlyStopping(
                 monitor='val_loss',
                 patience=patience,
+                min_delta=0.001,  # Stop if improvement < 0.1%
                 restore_best_weights=True,  # Keep best model
                 verbose=1
             ),
             # Reduce LR on plateau: reduce learning rate if stuck
+            # factor=0.3 means LR drops to 30% (more aggressive than 50%)
             callbacks.ReduceLROnPlateau(
                 monitor='val_loss',
-                factor=0.5,
-                patience=patience // 2,
+                factor=0.3,  # More aggressive reduction (was 0.5)
+                patience=5,  # Reduce LR after 5 epochs without improvement
                 min_lr=1e-6,
+                min_delta=0.001,  # Ignore tiny improvements
                 verbose=1
             )
         ]

@@ -185,7 +185,7 @@ def train_cnn_lstm(config: dict, horizon: int = 1) -> dict:
         df_features,
         train_end=config['data']['train_end'],
         test_start=config['data']['test_start'],
-        val_ratio=0.15
+        val_ratio=0.1  # Same as XGB for fair comparison
     )
     
     # Get feature columns

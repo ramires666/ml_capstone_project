@@ -130,7 +130,7 @@ THRESHOLD = 0.0002  # Slope threshold for direction classification
 HORIZON = 1         # Predict next bar direction
 
 # CNN-LSTM specific parameter
-LOOKBACK = 20       # How many past candles to look at
+LOOKBACK = 10       # How many past candles to look at (10 showed better results than 20)
                     # 20 candles × 15 min = 5 hours of history
                     # Experiment with: 5, 10, 20, 30, 50
 
@@ -204,7 +204,7 @@ train_df, val_df, test_df = split_data_by_time(
     df_features,
     train_end=TRAIN_END,
     test_start=TEST_START,
-    val_ratio=0.15  # 15% for validation (neural nets need more validation data)
+    val_ratio=0.1  # Same as XGB for fair comparison
 )
 
 feature_cols = get_indicator_columns(
@@ -277,56 +277,143 @@ print(f"   Input shape will be: (samples, {LOOKBACK}, {X_train.shape[1]})")
 
 # %%
 # ==============================================================================
-# CREATE AND CONFIGURE MODEL
+# HYPERPARAMETER TUNING (GRID SEARCH)
 # ==============================================================================
+#
+# Перебираем комбинации гиперпараметров для нахождения лучшей модели.
+# Каждая комбинация обучается с уменьшенным числом эпох для скорости.
 
 print("\n" + "="*60)
-print("🏗️ CREATING CNN-LSTM MODEL")
+print("🔧 HYPERPARAMETER TUNING")
 print("="*60)
 
-model = CNNLSTMModel(
-    n_classes=3,         # DOWN=0, SIDEWAYS=1, UP=2
-    lookback=LOOKBACK,   # Sequence length (20 candles)
-    conv_filters=16,     # Number of 1D convolution filters
-    lstm_units=64,       # LSTM hidden state size
-    dropout=0.5,         # 50% dropout for regularization
-    dense_units=32,      # Dense layer before output
-    learning_rate=0.001, # Adam optimizer learning rate
-    device='cuda',       # Use GPU if available
-    random_seed=42       # For reproducibility
-)
+# Параметры для перебора
+PARAM_GRID = {
+    'conv_filters': [16,32, 64, 128],           # Фильтры Conv1D
+    'dropout': [0.1, 0.2, 0.3],        # Dropout rate
+    'learning_rate': [0.001,],   # Learning rate
+    'lstm_units': [64, 96, 128],             # LSTM units
+    'batch_size': [32, 64],             # Batch size
+}
 
-print(f"\n✅ Model created with architecture:")
-print(f"   Input:  ({LOOKBACK}, {len(feature_cols)})")
-print(f"   Conv1D: {16} filters, kernel_size=3")
-print(f"   LSTM:   {64} units")
-print(f"   Dense:  {32} units")
-print(f"   Output: 3 classes (softmax)")
+# Быстрый поиск с меньшим числом эпох
+SEARCH_EPOCHS = 20
+SEARCH_PATIENCE = 7
+
+print(f"\nПараметры для перебора:")
+for param, values in PARAM_GRID.items():
+    print(f"   {param}: {values}")
+
+total_combinations = 1
+for values in PARAM_GRID.values():
+    total_combinations *= len(values)
+print(f"\nВсего комбинаций: {total_combinations}")
+print(f"Эпох на комбинацию: {SEARCH_EPOCHS}")
+
+# Запуск поиска
+from itertools import product
+import gc
+
+results = []
+best_val_acc = 0
+best_params = {}
+
+param_names = list(PARAM_GRID.keys())
+param_values = list(PARAM_GRID.values())
+
+for i, combo in enumerate(product(*param_values)):
+    params = dict(zip(param_names, combo))
+    
+    print(f"\n[{i+1}/{total_combinations}] Testing: {params}")
+    
+    # Создаём модель с этими параметрами
+    test_model = CNNLSTMModel(
+        n_classes=3,
+        lookback=LOOKBACK,
+        conv_filters=params['conv_filters'],
+        lstm_units=params['lstm_units'],
+        dropout=params['dropout'],
+        learning_rate=params['learning_rate'],
+        device='cuda',
+        random_seed=42
+    )
+    
+    # Быстрое обучение
+    test_model.fit(
+        X_train, y_train,
+        X_val, y_val,
+        feature_names=feature_cols,
+        epochs=SEARCH_EPOCHS,
+        batch_size=params['batch_size'],
+        patience=SEARCH_PATIENCE
+    )
+    
+    # Оценка на validation
+    val_metrics = test_model.evaluate(X_val, y_val)
+    val_acc = val_metrics['accuracy']
+    
+    results.append({**params, 'val_accuracy': val_acc})
+    print(f"   Val Accuracy: {val_acc:.4f}")
+    
+    if val_acc > best_val_acc:
+        best_val_acc = val_acc
+        best_params = params.copy()
+        print(f"   ⭐ New best!")
+    
+    # Очистка памяти
+    del test_model
+    gc.collect()
+
+# Результаты поиска
+print("\n" + "="*60)
+print("📊 TUNING RESULTS")
+print("="*60)
+
+import pandas as pd
+results_df = pd.DataFrame(results).sort_values('val_accuracy', ascending=False)
+print(results_df.to_string(index=False))
+
+print(f"\n🏆 Best parameters:")
+for param, value in best_params.items():
+    print(f"   {param}: {value}")
+print(f"   Val Accuracy: {best_val_acc:.4f}")
 
 # %%
 # ==============================================================================
-# TRAIN THE MODEL
+# TRAIN FINAL MODEL WITH BEST PARAMETERS
 # ==============================================================================
-#
-# Training uses:
-# - Early stopping: Stop if validation loss doesn't improve for 'patience' epochs
-# - Adam optimizer: Adaptive learning rate
-# - Categorical cross-entropy loss: Standard for multi-class classification
-#
-# This may take several minutes depending on hardware.
 
 print("\n" + "="*60)
-print("🚀 TRAINING MODEL")
+print("🚀 TRAINING FINAL MODEL WITH BEST PARAMETERS")
 print("="*60)
-print("This may take several minutes...\n")
 
+# Создаём финальную модель с лучшими параметрами
+model = CNNLSTMModel(
+    n_classes=3,
+    lookback=LOOKBACK,
+    conv_filters=best_params.get('conv_filters', 32),
+    lstm_units=best_params.get('lstm_units', 64),
+    dropout=best_params.get('dropout', 0.2),
+    learning_rate=best_params.get('learning_rate', 0.001),
+    device='cuda',
+    random_seed=42
+)
+
+print(f"\n✅ Final model architecture:")
+print(f"   Conv filters: {best_params.get('conv_filters', 32)}")
+print(f"   LSTM units: {best_params.get('lstm_units', 64)}")
+print(f"   Dropout: {best_params.get('dropout', 0.2)}")
+print(f"   Learning rate: {best_params.get('learning_rate', 0.001)}")
+print(f"   Batch size: {best_params.get('batch_size', 64)}")
+
+# Полное обучение с лучшими параметрами
 model.fit(
     X_train, y_train,
     X_val, y_val,
     feature_names=feature_cols,
-    epochs=100,       # Maximum epochs (early stopping will likely end sooner)
-    batch_size=64,    # Samples per gradient update
-    patience=15       # Stop if no improvement for 15 epochs
+    epochs=100,
+    batch_size=best_params.get('batch_size', 64),
+    patience=15
 )
 
 print("\n✅ Training complete!")
