@@ -1,25 +1,51 @@
-# CNN-LSTM Configuration
-model:
-  type: cnn_lstm
-  name: cnn_lstm_advanced
+# =============================================================================
+# CNN-LSTM Advanced Model Configuration
+# =============================================================================
+# 
+# This configuration file defines all parameters for the CNN-LSTM neural network.
+# The architecture combines Convolutional and LSTM layers for sequence modeling.
+#
+# Usage:
+#   python -m src.models.train --config configs/cnn_lstm.yaml
+#
+# =============================================================================
 
-# Data settings
+# -----------------------------------------------------------------------------
+# Model Type
+# -----------------------------------------------------------------------------
+model:
+  type: cnn_lstm  # Options: 'xgboost' or 'cnn_lstm'
+
+# -----------------------------------------------------------------------------
+# Data Settings
+# -----------------------------------------------------------------------------
 data:
-  symbol: BTCUSDT
-  timeframe: 15m
   train_start: "2024-01-01"
   train_end: "2025-06-30"
   test_start: "2025-07-01"
   test_end: "2025-12-31"
 
-# Target generation (Oracle labels)
+# -----------------------------------------------------------------------------
+# Target Label Settings (Oracle)
+# -----------------------------------------------------------------------------
 labeling:
-  sigma: 4
-  threshold: 0.0004
-  n_classes: 3  # Can switch to 2 if better
+  sigma: 4              # Gaussian smoothing window
+  threshold: 0.0004     # Classification threshold
+  n_classes: 3          # UP/SIDEWAYS/DOWN
 
-# Feature settings
+# -----------------------------------------------------------------------------
+# Feature Settings
+# -----------------------------------------------------------------------------
 features:
+  # Prediction horizon
+  horizon: 1
+  
+  # Lookback window for LSTM sequences
+  # This is how many previous timesteps the model "sees"
+  # Higher values = more context but more memory/computation
+  lookback: 20
+  
+  # Feature groups (fewer groups for neural network to prevent overfitting)
   groups:
     - momentum
     - overlap
@@ -27,36 +53,56 @@ features:
     - volatility
     - volume
     - statistics
-  horizon: 1  # Predict 1 bar ahead
-  lookback: 20  # Sequence length for LSTM
 
-# CNN-LSTM architecture
+# -----------------------------------------------------------------------------
+# CNN-LSTM Architecture
+# -----------------------------------------------------------------------------
 architecture:
-  conv_filters: 16
-  kernel_size: 3
-  lstm_units: 64
-  dropout: 0.5
-  dense_units: 32
+  # Conv1D layer settings
+  # Kernel extracts local patterns in the time series
+  conv_filters: 16      # Number of convolutional filters
+  kernel_size: 3        # Size of 1D convolution kernel
+  
+  # LSTM layer settings
+  # LSTMs capture long-term dependencies in sequences
+  lstm_units: 64        # Units in first LSTM layer (second layer = 2x)
+  
+  # Regularization
+  # Dropout helps prevent overfitting by randomly zeroing neurons
+  dropout: 0.5          # Dropout rate (0.3-0.6 typical)
+  
+  # Dense layer before output
+  dense_units: 32       # Units in fully-connected layer
 
-# Training settings
+# -----------------------------------------------------------------------------
+# Training Settings
+# -----------------------------------------------------------------------------
 training:
-  batch_size: 64
+  # Maximum training epochs
+  # Training will stop early if validation loss doesn't improve
   epochs: 100
+  
+  # Batch size
+  # Larger batches = faster training but may generalize worse
+  batch_size: 64
+  
+  # Early stopping patience
+  # Stop if validation loss doesn't improve for this many epochs
+  patience: 15
+  
+  # Learning rate for Adam optimizer
+  # Lower = slower but more stable, higher = faster but may overshoot
   learning_rate: 0.001
-  patience: 15  # Early stopping patience
+  
+  # Device: 'cuda' for GPU, 'cpu' for CPU
   device: cuda
+  
+  # Random seed for reproducibility
   random_seed: 42
 
-# Hyperparameter search (manual/grid)
-hyperparam_search:
-  lookback: [5, 10, 20, 30]
-  conv_filters: [8, 16, 32]
-  lstm_units: [32, 64, 128]
-  dropout: [0.3, 0.5]
-  learning_rate: [0.001, 0.0005, 0.0001]
-
-# Output paths
+# -----------------------------------------------------------------------------
+# Output Settings
+# -----------------------------------------------------------------------------
 output:
   model_dir: models_artifacts
-  metrics_file: reports/metrics.json
-  plots_dir: reports/plots
+  reports_dir: reports

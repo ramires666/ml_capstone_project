@@ -1,24 +1,60 @@
-# Baseline XGBoost Configuration
+# =============================================================================
+# XGBoost Baseline Model Configuration
+# =============================================================================
+# 
+# This configuration file defines all parameters for the XGBoost baseline model.
+# Modify these values to experiment with different settings.
+#
+# Usage:
+#   python -m src.models.train --config configs/baseline.yaml
+#
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Model Type
+# -----------------------------------------------------------------------------
 model:
-  type: xgboost
-  name: baseline_xgb
+  type: xgboost  # Options: 'xgboost' or 'cnn_lstm'
 
-# Data settings
+# -----------------------------------------------------------------------------
+# Data Settings
+# -----------------------------------------------------------------------------
+# Defines the date ranges for training and testing
 data:
-  symbol: BTCUSDT
-  timeframe: 15m
-  train_start: "2024-01-01"
-  train_end: "2025-06-30"
-  test_start: "2025-07-01"
-  test_end: "2025-12-31"
+  train_start: "2024-01-01"   # Start date for training data
+  train_end: "2025-06-30"     # End date for training data
+  test_start: "2025-07-01"    # Start date for test data
+  test_end: "2025-12-31"      # End date for test data
 
-# Target generation (Oracle labels)
+# -----------------------------------------------------------------------------
+# Target Label Settings (Oracle)
+# -----------------------------------------------------------------------------
+# Controls how the oracle labels are generated using Gaussian smoothing
 labeling:
+  # Sigma: Standard deviation for Gaussian kernel
+  # Higher values = more smoothing = fewer direction changes
+  # Typical range: 2-10 for 15-minute candles
   sigma: 4
+  
+  # Threshold: Minimum slope for UP/DOWN classification
+  # Higher values = more SIDEWAYS labels
+  # Typical range: 0.0002-0.0008 for 15-minute BTC data
   threshold: 0.0004
+  
+  # Number of classes (2 = UP/DOWN, 3 = UP/SIDEWAYS/DOWN)
+  n_classes: 3
 
-# Feature settings
+# -----------------------------------------------------------------------------
+# Feature Settings
+# -----------------------------------------------------------------------------
 features:
+  # Prediction horizon: how many bars ahead to predict
+  # horizon=1 means predict next bar's direction
+  # horizon=5 means predict direction 5 bars ahead
+  horizon: 1
+  
+  # Feature groups to include
+  # Options: momentum, overlap, trend, volatility, volume, statistics, candle
   groups:
     - momentum
     - overlap
@@ -26,29 +62,32 @@ features:
     - volatility
     - volume
     - statistics
-    - candle
-  horizon: 1  # Predict 1 bar ahead
-  top_k_features: 30  # Use top K features by importance
+  
+  # Top K features to use (set to null to use all)
+  # Using fewer features can reduce overfitting
+  top_k_features: null
 
-# XGBoost hyperparameters (will be tuned via RandomizedSearchCV)
+# -----------------------------------------------------------------------------
+# XGBoost Model Parameters
+# -----------------------------------------------------------------------------
 xgboost:
+  # Device: 'cuda' for GPU acceleration, 'cpu' for CPU only
   device: cuda
-  n_estimators: 100
-  learning_rate: 0.1
-  max_depth: 5
-  subsample: 0.8
-  colsample_bytree: 0.8
-  eval_metric: mlogloss
+  
+  # Random state for reproducibility
   random_state: 42
+  
+  # Default model parameters (will be overridden if tuning is enabled)
+  n_estimators: 100       # Number of boosting rounds
+  learning_rate: 0.1      # Step size shrinkage
+  max_depth: 5            # Maximum tree depth
+  subsample: 0.8          # Row subsampling ratio
+  colsample_bytree: 0.8   # Column subsampling ratio
 
-# Training settings
-training:
-  test_size: 0.2
-  cv_splits: 5
-  n_iter_search: 25
-  scoring: f1_weighted
-
-# Hyperparameter search space
+# -----------------------------------------------------------------------------
+# Hyperparameter Search Space
+# -----------------------------------------------------------------------------
+# Used by RandomizedSearchCV when n_iter_search > 0
 hyperparam_search:
   n_estimators: [50, 100, 200, 300]
   learning_rate: [0.01, 0.03, 0.05, 0.1, 0.2]
@@ -60,8 +99,27 @@ hyperparam_search:
   reg_alpha: [0, 0.01, 0.1, 1]
   reg_lambda: [0, 0.01, 0.1, 1]
 
-# Output paths
+# -----------------------------------------------------------------------------
+# Training Settings
+# -----------------------------------------------------------------------------
+training:
+  # Number of hyperparameter combinations to try
+  # Set to 0 to skip tuning and use default parameters
+  n_iter_search: 25
+  
+  # Number of cross-validation splits (TimeSeriesSplit)
+  cv_splits: 5
+  
+  # Scoring metric for hyperparameter selection
+  # Options: 'accuracy', 'f1_weighted', 'f1_macro'
+  scoring: f1_weighted
+
+# -----------------------------------------------------------------------------
+# Output Settings
+# -----------------------------------------------------------------------------
 output:
+  # Directory to save trained models and artifacts
   model_dir: models_artifacts
-  metrics_file: reports/metrics.json
-  plots_dir: reports/plots
+  
+  # Directory for metrics and plots
+  reports_dir: reports
