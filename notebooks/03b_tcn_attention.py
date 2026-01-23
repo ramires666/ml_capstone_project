@@ -21,7 +21,7 @@ Each config takes ~2-3 minutes, so full search is ~40-60 min.
 import sys
 from pathlib import Path
 
-project_root = Path().absolute().parent
+project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
 import numpy as np
@@ -46,7 +46,7 @@ print("✅ Imports loaded")
 # ==============================================================================
 
 # Oracle labeling params - must match other notebooks for fair comparison
-SIGMA = 4
+SIGMA = 3
 THRESHOLD = 0.0002
 HORIZON = 1
 TRAIN_END = "2025-06-30"

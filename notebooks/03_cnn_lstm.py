@@ -48,7 +48,7 @@ EXPECTED RESULTS:
 import sys
 from pathlib import Path
 
-project_root = Path().absolute().parent
+project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
 import pandas as pd
@@ -123,7 +123,7 @@ from src.models.cnn_lstm import CNNLSTMModel
 # ==============================================================================
 
 # Oracle label parameters (same as baseline for fair comparison)
-SIGMA = 4           # Gaussian smoothing sigma
+SIGMA = 3           # Gaussian smoothing sigma
 THRESHOLD = 0.0002  # Slope threshold for direction classification
 
 # Prediction horizon
@@ -345,7 +345,8 @@ for i, combo in enumerate(product(*param_values)):
         feature_names=feature_cols,
         epochs=SEARCH_EPOCHS,
         batch_size=params['batch_size'],
-        patience=SEARCH_PATIENCE
+        patience=SEARCH_PATIENCE,
+        use_class_weights=True  # Handle class imbalance (SIDEWAYS ~40%)
     )
     
     # Оценка на validation
@@ -425,7 +426,8 @@ model.fit(
     feature_names=feature_cols,
     epochs=100,
     batch_size=best_params.get('batch_size', 64),
-    patience=15
+    patience=15,
+    use_class_weights=True  # Handle class imbalance (SIDEWAYS ~40%)
 )
 
 print("\n✅ Training complete!")

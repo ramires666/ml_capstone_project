@@ -85,12 +85,12 @@ def check_gpu():
 
 def build_cnn_lstm_model(n_features: int,
                          n_classes: int = 3,
-                         lookback: int = 20,
-                         conv_filters: int = 32,  # Increased from 16
+                         lookback: int = 128,
+                         conv_filters: int = 128,  # Increased from 16
                          kernel_size: int = 3,
-                         lstm_units: int = 64,
+                         lstm_units: int = 128,
                          dropout: float = 0.2,  # Reduced from 0.5 per expert recommendation
-                         dense_units: int = 32) -> keras.Model:
+                         dense_units: int = 128) -> keras.Model:
     """
     Build CNN-LSTM model using Keras Functional API.
     

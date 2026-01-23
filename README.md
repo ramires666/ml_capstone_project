@@ -8,8 +8,9 @@ Predicting exact cryptocurrency prices is nearly impossible due to high volatili
 
 This project implements:
 
-- **Baseline Model:** XGBoost classifier with 60+ technical indicators
-- **Advanced Model:** CNN-LSTM neural network for capturing temporal patterns
+- **XGBoost Baseline:** Gradient boosting with 60+ technical indicators
+- **CNN-LSTM:** Convolutional + LSTM neural network for temporal patterns
+- **TCN-Attention:** Temporal Convolutional Network with Multi-Head Self-Attention
 
 ## 📊 Data
 
@@ -18,41 +19,98 @@ This project implements:
 - **Features:** OHLCV + 60+ technical indicators (momentum, trend, volatility, volume, candle patterns)
 - **Target:** Oracle labels via Gaussian smoothing (3 classes: DOWN=0, SIDEWAYS=1, UP=2)
 
+---
+
 ## 🏗️ Project Structure
 
 ```
-├── configs/                    # Model configuration files
-│   ├── baseline.yaml           # XGBoost configuration
-│   └── cnn_lstm.yaml           # CNN-LSTM configuration
-├── notebooks/                  # Analysis notebooks (Python scripts)
-│   ├── 01_eda.py               # Exploratory Data Analysis
-│   ├── 02_baseline_xgb.py      # XGBoost training
-│   ├── 03_cnn_lstm.py          # CNN-LSTM training
-│   └── 04_comparison.py        # Model comparison
-├── scripts/                    # Utility scripts
-│   └── compare_horizons.py     # Compare prediction horizons
-├── src/                        # Source code
-│   ├── data/                   # Data loading and processing
-│   │   ├── downloader.py       # Download from Binance
-│   │   ├── parser.py           # Parse ZIP to Parquet
-│   │   └── loader.py           # Load and merge data
-│   ├── features/               # Feature engineering
-│   │   ├── indicators.py       # Technical indicators
-│   │   └── builder.py          # Feature pipeline
-│   ├── labeling/               # Target generation
-│   │   └── oracle.py           # Oracle labels (Gaussian smoothing)
-│   ├── models/                 # ML models
-│   │   ├── xgb.py              # XGBoost classifier
-│   │   ├── cnn_lstm.py         # CNN-LSTM (TensorFlow/Keras)
-│   │   ├── train.py            # Training script
-│   │   └── predict.py          # Inference script
-│   └── api/                    # REST API
-│       └── app.py              # FastAPI application
-├── models_artifacts/           # Saved models and scalers
-├── reports/                    # Metrics and plots
-├── requirements.txt            # Python dependencies
-├── Dockerfile                  # Container configuration
-└── README.md                   # This file
+capstone_project/
+├── configs/                        # Model configuration files
+│   ├── baseline.yaml               # XGBoost configuration
+│   └── cnn_lstm.yaml               # CNN-LSTM configuration
+│
+├── notebooks/                      # 🔬 DEVELOPMENT: Grid search & experiments
+│   ├── README.md                   # ← Notebook run order documentation
+│   ├── 01_eda.py                   # Exploratory Data Analysis
+│   ├── 02_baseline_xgb.py          # XGBoost training + tuning
+│   ├── 03_cnn_lstm.py              # CNN-LSTM grid search → cnn_lstm_best_params.json
+│   ├── 03b_tcn_attention.py        # TCN-Attention grid search → tcn_attention_best_params.json
+│   ├── 04_train_additional_horizons.py  # Train h=3,5 using best_params
+│   ├── 05_comparison.py            # Compare all models
+│   └── models_artifacts/           # Saved models from notebooks
+│       ├── cnn_lstm_best_params.json
+│       ├── tcn_attention_best_params.json
+│       └── *.keras, *.joblib
+│
+├── src/                            # 🏭 PRODUCTION: Source code
+│   ├── data/                       # Data loading and processing
+│   │   ├── downloader.py           # Download from Binance
+│   │   ├── parser.py               # Parse ZIP to Parquet
+│   │   └── loader.py               # Load and merge data
+│   ├── features/                   # Feature engineering
+│   │   ├── indicators.py           # Technical indicators (pandas-ta)
+│   │   └── builder.py              # Feature pipeline
+│   ├── labeling/                   # Target generation
+│   │   └── oracle.py               # Oracle labels (Gaussian smoothing)
+│   ├── models/                     # ML models
+│   │   ├── xgb.py                  # XGBoost classifier
+│   │   ├── cnn_lstm.py             # CNN-LSTM (TensorFlow/Keras)
+│   │   ├── tcn_attention.py        # TCN-Attention (TensorFlow/Keras)
+│   │   ├── train.py                # CLI training script (loads best_params.json!)
+│   │   └── predict.py              # Inference script
+│   └── api/                        # REST API
+│       └── app.py                  # FastAPI application
+│
+├── models_artifacts/               # Production models (from train.py)
+├── reports/                        # Metrics and plots
+├── Dockerfile                      # Container for production
+└── requirements.txt
+```
+
+---
+
+## 🔄 Two Workflows: Development vs Production
+
+### 🔬 Development (Notebooks)
+**Purpose:** Grid search, experiments, model research
+
+```bash
+cd notebooks/
+python 01_eda.py            # EDA
+python 02_baseline_xgb.py   # XGBoost tuning
+python 03_cnn_lstm.py       # CNN-LSTM grid search → saves best_params.json
+python 03b_tcn_attention.py # TCN-Attention grid search → saves best_params.json
+python 04_train_additional_horizons.py  # Train models for h=3,5
+python 05_comparison.py     # Compare all models
+```
+
+> **Output:** `notebooks/models_artifacts/cnn_lstm_best_params.json`, `.keras` models
+
+### 🏭 Production (train.py CLI)
+**Purpose:** Final training with optimal hyperparameters
+
+```bash
+# Loads best_params.json from notebooks if it exists!
+python -m src.models.train --config configs/cnn_lstm.yaml
+
+# Or XGBoost
+python -m src.models.train --config configs/baseline.yaml
+```
+
+> **Important:** train.py automatically loads `cnn_lstm_best_params.json` if the file exists in `models_artifacts/`. This ensures production uses the same hyperparameters as notebook experiments.
+
+### 🐳 Docker Deployment
+**Purpose:** Run API in production
+
+```bash
+# Build
+docker build -t btc-predictor .
+
+# Run with GPU
+docker run --gpus all -p 8000:8000 btc-predictor
+
+# Test
+curl http://localhost:8000/health
 ```
 
 ---
@@ -65,267 +123,115 @@ This project implements:
 - NVIDIA GPU with CUDA support
 - Conda (Miniconda or Anaconda)
 
----
+### Step 1: Environment Setup
 
-## 📦 Environment Setup (WSL2)
-
-### Step 1: Open WSL Terminal
-
-```powershell
-# In Windows PowerShell or CMD
+```bash
 wsl
-```
-
-### Step 2: Create Conda Environment
-
-Create a new conda environment with Python 3.11 in a custom location:
-
-```bash
-# Create environment in specific folder (replace path as needed)
-conda create --prefix /mnt/w/WSL/btc python=3.11 -y
-
-# Activate the environment
-conda activate /mnt/w/WSL/btc
-```
-
-### Step 3: Install Dependencies via Conda-Forge
-
-Install all packages through conda-forge for proper CUDA integration:
-
-```bash
-# Install TensorFlow with CUDA support + all other dependencies
-conda install -c conda-forge \
-    tensorflow cudatoolkit cudnn \
-    pandas numpy scipy scikit-learn xgboost \
-    matplotlib seaborn \
-    fastapi uvicorn \
-    pyyaml joblib requests tqdm numba \
-    -y
-
-# Install pandas-ta (not available in conda-forge)
-pip install pandas-ta
-```
-
-### Step 4: Verify GPU Support
-
-```bash
-# Check TensorFlow GPU detection
-python -c "import tensorflow as tf; print('GPU:', tf.config.list_physical_devices('GPU'))"
-
-# Check XGBoost CUDA support
-python -c "import xgboost as xgb; print('XGBoost version:', xgb.__version__)"
-```
-
-Expected output:
-
-```
-GPU: [PhysicalDevice(name='/physical_device:GPU:0', device_type='GPU')]
-XGBoost version: 2.x.x
-```
-
----
-
-## 📥 Data Download
-
-### Step 1: Download Historical Data from Binance
-
-```bash
-# Navigate to project directory
+conda activate rapids-25.10  # or your environment
 cd /mnt/c/_PYTH/projects/capstone_project
-
-# Download klines, funding rates, and aggregated trades
-python -m src.data.downloader
 ```
 
-### Step 2: Parse ZIP Files to Parquet
-
-| col1 | col2 | col3 |
-| ---- | ---- | ---- |
-|      |      |      |
-|      |      |      |
+### Step 2: Download Data
 
 ```bash
-# Convert downloaded archives to Parquet format
-python -m src.data.parser
+python -m src.data.downloader  # Download from Binance
+python -m src.data.parser      # Convert to Parquet
 ```
 
----
-
-## 🏋️ Model Training
-
-### Train XGBoost Baseline
+### Step 3: Run Notebooks (Development)
 
 ```bash
-# Train with default configuration (horizon=1 bar)
-python -m src.models.train --config configs/baseline.yaml
-
-# Train with different prediction horizon
-python -m src.models.train --config configs/baseline.yaml --horizon 3
+cd notebooks/
+# Run in order: 01 → 02 → 03 → 03b → 04 → 05
+# See notebooks/README.md for details
 ```
 
-### Train CNN-LSTM Advanced Model
+### Step 4: Production Training (Optional)
 
 ```bash
-# Train CNN-LSTM model
+# Uses best_params.json from notebooks!
 python -m src.models.train --config configs/cnn_lstm.yaml
-
-# With custom horizon
-python -m src.models.train --config configs/cnn_lstm.yaml --horizon 5
 ```
 
-### Compare Multiple Horizons
+### Step 5: Start API
 
 ```bash
-# Train and compare horizons 1, 3, and 5
-python scripts/compare_horizons.py --horizons 1 3 5
-```
-
----
-
-## 🔮 Making Predictions
-
-### Command Line
-
-```bash
-# Predict using XGBoost
-python -m src.models.predict --model xgb --horizon 1 --latest
-
-# Predict using CNN-LSTM
-python -m src.models.predict --model cnn_lstm --horizon 1 --latest
-```
-
-### REST API
-
-```bash
-# Start the API server
 uvicorn src.api.app:app --host 0.0.0.0 --port 8000
-
-# In another terminal, test the API
-curl http://localhost:8000/health
+# Open http://localhost:8000
 ```
-
-Open http://localhost:8000 in your browser for the web interface.
 
 ---
 
-## 🐳 Docker Deployment
+## ⚖️ Class Weights (Important!)
 
-### Build Container
+All neural networks use `use_class_weights=True` to handle class imbalance:
 
-```bash
-docker build -t btc-predictor .
-```
+| Class | Distribution | Without Weights | With Weights |
+|-------|--------------|-----------------|--------------|
+| DOWN (0) | ~30% | Ignored | Balanced |
+| SIDEWAYS (1) | ~40% | Over-predicted | Balanced |
+| UP (2) | ~30% | Ignored | Balanced |
 
-### Run Container
-
-```bash
-# Run with GPU support
-docker run --gpus all -p 8000:8000 btc-predictor
-
-# Run without GPU
-docker run -p 8000:8000 btc-predictor
-```
-
-### Test API
-
-```bash
-curl -X POST http://localhost:8000/predict \
-  -H "Content-Type: application/json" \
-  -d '{"candles": [...], "model": "xgb"}'
-```
+**Result:** F1 Macro ~0.50-0.55 instead of fake 70% accuracy
 
 ---
 
 ## 📈 Expected Results
 
-| Model            | Accuracy | F1 Score   | Horizon |
-| ---------------- | -------- | ---------- | ------- |
-| XGBoost Baseline | ~45-55%  | ~0.40-0.50 | 1 bar   |
-| CNN-LSTM         | ~45-55%  | ~0.40-0.50 | 1 bar   |
+| Model | Accuracy | F1 Macro | F1 Weighted | Notes |
+|-------|----------|----------|-------------|-------|
+| XGBoost | ~50-55% | ~0.45-0.50 | ~0.50-0.55 | Baseline |
+| CNN-LSTM | ~50-55% | ~0.45-0.55 | ~0.50-0.55 | With class weights |
+| TCN-Attention | ~50-55% | ~0.50-0.55 | ~0.52-0.55 | Best for sequences |
 
-> Note: Results depend on market conditions and data period.
+> **F1 Macro** is the main metric! Accuracy is misleading due to class imbalance.
 
 ---
 
 ## 🔧 Configuration
 
-### Baseline Configuration (`configs/baseline.yaml`)
+### `configs/baseline.yaml` (XGBoost)
 
 ```yaml
-model:
-  type: xgboost
-  
 labeling:
-  sigma: 4           # Gaussian smoothing parameter
-  threshold: 0.0004  # UP/DOWN threshold
-
-features:
-  horizon: 1         # Bars ahead to predict
-  top_k_features: 30 # Use top K features
+  sigma: 4
+  threshold: 0.0002  # UP/DOWN threshold
 
 xgboost:
-  device: cuda       # Use GPU
+  device: cuda
   n_estimators: 100
-  max_depth: 5
 ```
 
-### CNN-LSTM Configuration (`configs/cnn_lstm.yaml`)
+### `configs/cnn_lstm.yaml` (Neural Network)
 
 ```yaml
-model:
-  type: cnn_lstm
+features:
+  lookback: 10  # From grid search
 
 architecture:
-  lookback: 20       # Sequence length
-  conv_filters: 16
+  conv_filters: 64
   lstm_units: 64
-  dropout: 0.5
+  dropout: 0.3
 
 training:
-  epochs: 100
-  batch_size: 64
-  patience: 15       # Early stopping
-  device: cuda
+  epochs: 30
+  patience: 5
+  learning_rate: 0.0007
 ```
 
 ---
 
 ## 📝 API Endpoints
 
-| Endpoint     | Method | Description                 |
-| ------------ | ------ | --------------------------- |
-| `/`        | GET    | Web interface               |
-| `/health`  | GET    | Health check                |
-| `/predict` | POST   | Make prediction             |
-| `/docs`    | GET    | API documentation (Swagger) |
-
----
-
-## 🧪 Running Notebooks
-
-The notebooks are Python scripts compatible with VS Code and Jupyter:
-
-```bash
-# Option 1: Run as Python script
-python notebooks/01_eda.py
-
-# Option 2: Convert to Jupyter notebook
-pip install jupytext
-jupytext --to notebook notebooks/01_eda.py
-
-# Option 3: Open in VS Code with Python extension
-# Just open the .py file and run cells with # %% markers
-```
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Web interface |
+| `/health` | GET | Health check |
+| `/predict` | POST | Make prediction |
+| `/docs` | GET | Swagger docs |
 
 ---
 
 ## 📄 License
 
 MIT License
-
----
-
-## 🙏 Acknowledgments
-
-- Baseline approach from course notebook
-- CNN-LSTM architecture inspired by "Bitcoin price direction prediction using on-chain data" paper

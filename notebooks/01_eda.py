@@ -52,8 +52,8 @@ import sys
 from pathlib import Path
 
 # Add project root to Python path so we can import our modules
-# This is needed because we're running from notebooks/ directory
-project_root = Path().absolute().parent
+# Use Path(__file__) to get correct path regardless of CWD
+project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
 import pandas as pd
@@ -464,9 +464,9 @@ print("🎯 ORACLE LABELS ANALYSIS")
 print("="*60)
 
 # Create labels with our chosen parameters
-# sigma=4: Medium smoothing (good for 15-min candles)
+# sigma=3: Medium smoothing (good for 15-min candles)
 # threshold=0.0002: Slope threshold for direction classification
-SIGMA = 4
+SIGMA = 3
 THRESHOLD = 0.0002
 
 print(f"\nGenerating labels with:")

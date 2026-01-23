@@ -52,7 +52,8 @@ import sys
 from pathlib import Path
 
 # Add project root to path for importing our modules
-project_root = Path().absolute().parent
+# Use Path(__file__) to get correct path regardless of CWD
+project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
 import pandas as pd
@@ -118,7 +119,7 @@ from src.models.xgb import XGBBaseline, print_classification_report
 # Change these and re-run to see different results.
 
 # Oracle label parameters
-SIGMA = 4           # Gaussian smoothing sigma (higher = smoother trends)
+SIGMA = 3           # Gaussian smoothing sigma (higher = smoother trends)
 THRESHOLD = 0.0002  # Slope threshold for direction classification
 
 # Prediction horizon

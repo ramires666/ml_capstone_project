@@ -46,7 +46,7 @@ WHAT YOU'LL LEARN:
 import sys
 from pathlib import Path
 
-project_root = Path().absolute().parent
+project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
 import pandas as pd
@@ -127,7 +127,7 @@ print("📥 LOADING TEST DATA")
 print("="*60)
 
 df = load_and_merge_data(end_date='2025-12-31')
-df = create_oracle_labels(df, sigma=4, threshold=0.0002)
+df = create_oracle_labels(df, sigma=3, threshold=0.0002)
 df_features, _ = prepare_features(df, horizon=HORIZON)
 
 # Split to get test set
