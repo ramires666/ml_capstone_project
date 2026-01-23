@@ -29,8 +29,8 @@ data:
 # Target Label Settings (Oracle)
 # -----------------------------------------------------------------------------
 labeling:
-  sigma: 4              # Gaussian smoothing window
-  threshold: 0.0004     # Classification threshold
+  sigma: 3              # Gaussian smoothing window
+  threshold: 0.0002     # Classification threshold
   n_classes: 3          # UP/SIDEWAYS/DOWN
 
 # -----------------------------------------------------------------------------
@@ -43,7 +43,7 @@ features:
   # Lookback window for LSTM sequences
   # This is how many previous timesteps the model "sees"
   # Higher values = more context but more memory/computation
-  lookback: 20
+  lookback: 10  # 10 showed better results than 32 in notebook experiments
   
   # Feature groups (fewer groups for neural network to prevent overfitting)
   groups:
@@ -60,7 +60,7 @@ features:
 architecture:
   # Conv1D layer settings
   # Kernel extracts local patterns in the time series
-  conv_filters: 16      # Number of convolutional filters
+  conv_filters: 64      # Number of convolutional filters
   kernel_size: 3        # Size of 1D convolution kernel
   
   # LSTM layer settings
@@ -69,7 +69,7 @@ architecture:
   
   # Regularization
   # Dropout helps prevent overfitting by randomly zeroing neurons
-  dropout: 0.5          # Dropout rate (0.3-0.6 typical)
+  dropout: 0.3          # Dropout rate (0.3-0.6 typical)
   
   # Dense layer before output
   dense_units: 32       # Units in fully-connected layer
@@ -80,19 +80,19 @@ architecture:
 training:
   # Maximum training epochs
   # Training will stop early if validation loss doesn't improve
-  epochs: 100
+  epochs: 30
   
   # Batch size
   # Larger batches = faster training but may generalize worse
-  batch_size: 64
+  batch_size: 128
   
   # Early stopping patience
   # Stop if validation loss doesn't improve for this many epochs
-  patience: 15
+  patience: 5
   
   # Learning rate for Adam optimizer
   # Lower = slower but more stable, higher = faster but may overshoot
-  learning_rate: 0.001
+  learning_rate: 0.0007
   
   # Device: 'cuda' for GPU, 'cpu' for CPU
   device: cuda

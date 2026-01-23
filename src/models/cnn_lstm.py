@@ -55,6 +55,7 @@ from tensorflow import keras
 from tensorflow.keras import layers, callbacks, Model
 from sklearn.preprocessing import RobustScaler
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score
+from sklearn.utils.class_weight import compute_class_weight
 import joblib
 import json
 from pathlib import Path
@@ -345,7 +346,8 @@ class CNNLSTMModel:
             epochs: int = 100,
             batch_size: int = 64,
             patience: int = 5,  # Reduced from 15 - accuracy peaks in 3-5 epochs
-            scale: bool = True) -> 'CNNLSTMModel':
+            scale: bool = True,
+            use_class_weights: bool = True) -> 'CNNLSTMModel':
         """
         Train the CNN-LSTM model.
         
@@ -365,10 +367,13 @@ class CNNLSTMModel:
             Maximum training epochs.
         batch_size : int, default=64
             Batch size for training.
-        patience : int, default=15
+        patience : int, default=5
             Early stopping patience (epochs without improvement).
         scale : bool, default=True
             Whether to scale features.
+        use_class_weights : bool, default=True
+            If True, compute balanced class weights to handle class imbalance.
+            This forces model to pay more attention to minority classes (UP/DOWN).
         
         Returns
         -------
@@ -440,6 +445,15 @@ class CNNLSTMModel:
                 verbose=1
             )
         ]
+        # Compute class weights for imbalanced data (CRITICAL for F1 Macro!)
+        # Without class weights, model ignores minority classes (UP/DOWN)
+        # and just predicts majority class (SIDEWAYS ~40%)
+        class_weight_dict = None
+        if use_class_weights:
+            classes = np.unique(y_train_seq)
+            weights = compute_class_weight('balanced', classes=classes, y=y_train_seq)
+            class_weight_dict = dict(zip(classes, weights))
+            print(f"\n⚖️ Class weights: {class_weight_dict}")
         
         # Train model
         print(f"\n🏋️ Training for up to {epochs} epochs (patience={patience})...")
@@ -449,6 +463,7 @@ class CNNLSTMModel:
             epochs=epochs,
             batch_size=batch_size,
             callbacks=callback_list,
+            class_weight=class_weight_dict,
             verbose=1
         )
         

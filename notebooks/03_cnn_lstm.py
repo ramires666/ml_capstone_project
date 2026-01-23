@@ -378,6 +378,18 @@ for param, value in best_params.items():
     print(f"   {param}: {value}")
 print(f"   Val Accuracy: {best_val_acc:.4f}")
 
+# Save best params to JSON for train.py to use
+import json
+best_params_to_save = {
+    **best_params,
+    'val_accuracy': best_val_acc,
+    'lookback': LOOKBACK  # Include lookback used in grid search
+}
+Path('models_artifacts').mkdir(exist_ok=True)
+with open('models_artifacts/cnn_lstm_best_params.json', 'w') as f:
+    json.dump(best_params_to_save, f, indent=2)
+print(f"\n✅ Best params saved: models_artifacts/cnn_lstm_best_params.json")
+
 # %%
 # ==============================================================================
 # TRAIN FINAL MODEL WITH BEST PARAMETERS

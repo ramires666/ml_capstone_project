@@ -112,7 +112,8 @@ def train_baseline(config: dict, horizon: int = 1) -> dict:
             param_dist=config.get('hyperparam_search'),
             n_iter=config['training']['n_iter_search'],
             cv_splits=config['training']['cv_splits'],
-            scoring=config['training']['scoring']
+            scoring=config['training']['scoring'],
+            feature_names=feature_cols
         )
     else:
         model.fit(X_train, y_train, X_val, y_val, feature_names=feature_cols)
@@ -213,17 +214,45 @@ def train_cnn_lstm(config: dict, horizon: int = 1) -> dict:
     arch_config = config['architecture']
     train_config = config['training']
     
-    model = CNNLSTMModel(
-        n_classes=config['labeling'].get('n_classes', 3),
-        lookback=config['features'].get('lookback', 20),
-        conv_filters=arch_config['conv_filters'],
-        lstm_units=arch_config['lstm_units'],
-        dropout=arch_config['dropout'],
-        dense_units=arch_config['dense_units'],
-        learning_rate=train_config['learning_rate'],
-        device=train_config.get('device', 'cuda'),
-        random_seed=train_config.get('random_seed', 42)
-    )
+    # Load best params from notebook grid search if available
+    # This ensures train.py uses the SAME hyperparameters as notebook experiments
+    best_params_path = Path(config['output']['model_dir']) / 'cnn_lstm_best_params.json'
+    if best_params_path.exists():
+        with open(best_params_path) as f:
+            best_params = json.load(f)
+        print(f"\n✅ Loaded best params from notebook grid search: {best_params_path}")
+        print(f"   conv_filters: {best_params.get('conv_filters')}")
+        print(f"   lstm_units: {best_params.get('lstm_units')}")
+        print(f"   dropout: {best_params.get('dropout')}")
+        print(f"   lookback: {best_params.get('lookback')}")
+        
+        # Use best params from grid search
+        model = CNNLSTMModel(
+            n_classes=config['labeling'].get('n_classes', 3),
+            lookback=best_params.get('lookback', config['features'].get('lookback', 20)),
+            conv_filters=best_params.get('conv_filters', arch_config['conv_filters']),
+            lstm_units=best_params.get('lstm_units', arch_config['lstm_units']),
+            dropout=best_params.get('dropout', arch_config['dropout']),
+            dense_units=arch_config['dense_units'],
+            learning_rate=best_params.get('learning_rate', train_config['learning_rate']),
+            device=train_config.get('device', 'cuda'),
+            random_seed=train_config.get('random_seed', 42)
+        )
+    else:
+        print(f"\n⚠️ No best_params.json found at {best_params_path}")
+        print("   Using config values. Run 03_cnn_lstm.py notebook first for grid search!")
+        
+        model = CNNLSTMModel(
+            n_classes=config['labeling'].get('n_classes', 3),
+            lookback=config['features'].get('lookback', 20),
+            conv_filters=arch_config['conv_filters'],
+            lstm_units=arch_config['lstm_units'],
+            dropout=arch_config['dropout'],
+            dense_units=arch_config['dense_units'],
+            learning_rate=train_config['learning_rate'],
+            device=train_config.get('device', 'cuda'),
+            random_seed=train_config.get('random_seed', 42)
+        )
     
     model.fit(
         X_train, y_train,
@@ -231,7 +260,8 @@ def train_cnn_lstm(config: dict, horizon: int = 1) -> dict:
         feature_names=feature_cols,
         epochs=train_config['epochs'],
         batch_size=train_config['batch_size'],
-        patience=train_config['patience']
+        patience=train_config['patience'],
+        use_class_weights=True  # CRITICAL: handle class imbalance (SIDEWAYS ~40%)
     )
     
     # Evaluate on test

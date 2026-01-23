@@ -129,7 +129,8 @@ class XGBBaseline:
              n_iter: int = 25,
              cv_splits: int = 5,
              scoring: str = 'f1_weighted',
-             scale: bool = True) -> Dict[str, Any]:
+             scale: bool = True,
+             feature_names: Optional[List[str]] = None) -> Dict[str, Any]:
         """
         Tune hyperparameters using RandomizedSearchCV with TimeSeriesSplit.
         
@@ -141,10 +142,15 @@ class XGBBaseline:
             cv_splits: Number of cross-validation splits
             scoring: Scoring metric
             scale: Whether to scale features
+            feature_names: Feature names for importance display
         
         Returns:
             Best parameters dict
         """
+        # Store feature names if provided, needed for feature_importance()
+        if feature_names:
+            self.feature_names = feature_names
+        
         print("\n🔧 Tuning hyperparameters with TimeSeriesSplit...")
         
         if param_dist is None:

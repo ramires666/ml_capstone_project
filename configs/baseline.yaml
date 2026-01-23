@@ -34,12 +34,12 @@ labeling:
   # Sigma: Standard deviation for Gaussian kernel
   # Higher values = more smoothing = fewer direction changes
   # Typical range: 2-10 for 15-minute candles
-  sigma: 4
+  sigma: 3
   
   # Threshold: Minimum slope for UP/DOWN classification
   # Higher values = more SIDEWAYS labels
   # Typical range: 0.0002-0.0008 for 15-minute BTC data
-  threshold: 0.0004
+  threshold: 0.0002
   
   # Number of classes (2 = UP/DOWN, 3 = UP/SIDEWAYS/DOWN)
   n_classes: 3
