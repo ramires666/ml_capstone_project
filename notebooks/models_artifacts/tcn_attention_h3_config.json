@@ -1,0 +1,11 @@
+{
+  "n_classes": 3,
+  "lookback": 16,
+  "tcn_filters": 128,
+  "kernel_size": 3,
+  "num_tcn_blocks": 3,
+  "attention_heads": 4,
+  "dropout": 0.2,
+  "dense_units": 32,
+  "n_features": 62
+}
