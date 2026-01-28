@@ -1,14 +1,7 @@
 # Data files
-data/
-*.parquet
-*.csv
-*.db
+
 
 # Model artifacts
-models_artifacts/
-*.joblib
-*.pt
-*.pth
 
 # Old project files (reference only)
 old_project_files/
@@ -49,9 +42,7 @@ venv/
 .venv/
 
 # Reports (generated)
-reports/*.png
-reports/*.json
-static/
+
 
 # Temporary
 *.tmp

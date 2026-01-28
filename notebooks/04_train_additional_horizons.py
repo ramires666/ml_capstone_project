@@ -22,7 +22,13 @@ Each training cell is independent after data loading.
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).resolve().parent.parent
+# Works both as script (__file__ exists) and in Jupyter (use cwd)
+import os
+try:
+    project_root = Path(__file__).resolve().parent.parent
+except NameError:
+    cwd = Path(os.getcwd())
+    project_root = cwd.parent if cwd.name == 'notebooks' else cwd
 sys.path.insert(0, str(project_root))
 
 import numpy as np

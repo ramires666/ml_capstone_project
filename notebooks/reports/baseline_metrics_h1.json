@@ -1,16 +1,16 @@
 {
-  "accuracy": 0.606443533697632,
-  "f1_weighted": 0.6034590745338901,
-  "f1_macro": 0.5941157128144354,
+  "accuracy": 0.6058743169398907,
+  "f1_weighted": 0.6047509665157681,
+  "f1_macro": 0.5977031389700678,
   "best_params": {
-    "subsample": 0.6,
-    "reg_lambda": 0.1,
+    "subsample": 0.8,
+    "reg_lambda": 0,
     "reg_alpha": 1,
-    "n_estimators": 200,
-    "min_child_weight": 3,
-    "max_depth": 2,
-    "learning_rate": 0.03,
-    "gamma": 0,
-    "colsample_bytree": 0.8
+    "n_estimators": 100,
+    "min_child_weight": 5,
+    "max_depth": 3,
+    "learning_rate": 0.05,
+    "gamma": 0.3,
+    "colsample_bytree": 0.6
   }
 }

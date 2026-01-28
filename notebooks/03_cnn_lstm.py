@@ -46,9 +46,16 @@ EXPECTED RESULTS:
 # We check for GPU availability because training is MUCH faster on GPU.
 
 import sys
+import os
 from pathlib import Path
 
-project_root = Path(__file__).resolve().parent.parent
+# Works both as script (__file__ exists) and in Jupyter (use cwd)
+try:
+    project_root = Path(__file__).resolve().parent.parent
+except NameError:
+    # Running in Jupyter - assume cwd is project root or notebooks/
+    cwd = Path(os.getcwd())
+    project_root = cwd.parent if cwd.name == 'notebooks' else cwd
 sys.path.insert(0, str(project_root))
 
 import pandas as pd
