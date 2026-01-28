@@ -1,0 +1,9 @@
+{
+  "conv_filters": 64,
+  "dropout": 0.3,
+  "learning_rate": 0.001,
+  "lstm_units": 64,
+  "batch_size": 64,
+  "val_accuracy": 0.5309258547829427,
+  "lookback": 10
+}

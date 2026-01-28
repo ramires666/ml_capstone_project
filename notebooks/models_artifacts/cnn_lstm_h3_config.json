@@ -1,0 +1,10 @@
+{
+  "n_classes": 3,
+  "lookback": 32,
+  "conv_filters": 64,
+  "lstm_units": 64,
+  "dropout": 0.3,
+  "dense_units": 32,
+  "n_features": 62,
+  "feature_names": []
+}
