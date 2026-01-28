@@ -1,8 +1,8 @@
 {
   "n_classes": 3,
   "lookback": 10,
-  "conv_filters": 64,
-  "lstm_units": 64,
+  "conv_filters": 16,
+  "lstm_units": 128,
   "dropout": 0.3,
   "dense_units": 32,
   "n_features": 67,

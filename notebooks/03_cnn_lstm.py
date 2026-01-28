@@ -287,37 +287,37 @@ print(f"   Input shape will be: (samples, {LOOKBACK}, {X_train.shape[1]})")
 # HYPERPARAMETER TUNING (GRID SEARCH)
 # ==============================================================================
 #
-# Перебираем комбинации гиперпараметров для нахождения лучшей модели.
-# Каждая комбинация обучается с уменьшенным числом эпох для скорости.
+# Iterate over hyperparameter combinations to find the best model.
+# Each combination is trained with fewer epochs for speed.
 
 print("\n" + "="*60)
 print("🔧 HYPERPARAMETER TUNING")
 print("="*60)
 
-# Параметры для перебора
+# Parameters to search
 PARAM_GRID = {
-    'conv_filters': [16,32, 64, 128],           # Фильтры Conv1D
+    'conv_filters': [16,32, 64, 128],           # Conv1D filters
     'dropout': [0.1, 0.2, 0.3],        # Dropout rate
     'learning_rate': [0.001,],   # Learning rate
     'lstm_units': [64, 96, 128],             # LSTM units
     'batch_size': [32, 64],             # Batch size
 }
 
-# Быстрый поиск с меньшим числом эпох
+# Fast search with fewer epochs
 SEARCH_EPOCHS = 20
 SEARCH_PATIENCE = 7
 
-print(f"\nПараметры для перебора:")
+print(f"\nSearch parameter grid:")
 for param, values in PARAM_GRID.items():
     print(f"   {param}: {values}")
 
 total_combinations = 1
 for values in PARAM_GRID.values():
     total_combinations *= len(values)
-print(f"\nВсего комбинаций: {total_combinations}")
-print(f"Эпох на комбинацию: {SEARCH_EPOCHS}")
+print(f"\nTotal combinations: {total_combinations}")
+print(f"Epochs per combination: {SEARCH_EPOCHS}")
 
-# Запуск поиска
+# Run search
 from itertools import product
 import gc
 
@@ -333,7 +333,7 @@ for i, combo in enumerate(product(*param_values)):
     
     print(f"\n[{i+1}/{total_combinations}] Testing: {params}")
     
-    # Создаём модель с этими параметрами
+    # Create model with these parameters
     test_model = CNNLSTMModel(
         n_classes=3,
         lookback=LOOKBACK,
@@ -345,7 +345,7 @@ for i, combo in enumerate(product(*param_values)):
         random_seed=42
     )
     
-    # Быстрое обучение
+    # Quick training
     test_model.fit(
         X_train, y_train,
         X_val, y_val,
@@ -356,7 +356,7 @@ for i, combo in enumerate(product(*param_values)):
         use_class_weights=True  # Handle class imbalance (SIDEWAYS ~40%)
     )
     
-    # Оценка на validation
+    # Evaluate on validation set
     val_metrics = test_model.evaluate(X_val, y_val)
     val_acc = val_metrics['accuracy']
     
@@ -368,11 +368,11 @@ for i, combo in enumerate(product(*param_values)):
         best_params = params.copy()
         print(f"   ⭐ New best!")
     
-    # Очистка памяти
+    # Memory cleanup
     del test_model
     gc.collect()
 
-# Результаты поиска
+# Search results
 print("\n" + "="*60)
 print("📊 TUNING RESULTS")
 print("="*60)
@@ -407,7 +407,7 @@ print("\n" + "="*60)
 print("🚀 TRAINING FINAL MODEL WITH BEST PARAMETERS")
 print("="*60)
 
-# Создаём финальную модель с лучшими параметрами
+# Create final model with best parameters
 model = CNNLSTMModel(
     n_classes=3,
     lookback=LOOKBACK,
@@ -426,7 +426,7 @@ print(f"   Dropout: {best_params.get('dropout', 0.2)}")
 print(f"   Learning rate: {best_params.get('learning_rate', 0.001)}")
 print(f"   Batch size: {best_params.get('batch_size', 64)}")
 
-# Полное обучение с лучшими параметрами
+# Full training with best parameters
 model.fit(
     X_train, y_train,
     X_val, y_val,

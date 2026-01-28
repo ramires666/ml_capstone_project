@@ -7,5 +7,5 @@
   "attention_heads": 4,
   "dropout": 0.2,
   "dense_units": 32,
-  "n_features": 62
+  "n_features": 67
 }
